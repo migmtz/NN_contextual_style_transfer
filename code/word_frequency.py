@@ -1,4 +1,5 @@
-import ipdb
+import pandas as pd
+import numpy as np
 import os
 from os import listdir
 
@@ -53,7 +54,7 @@ def select_most_frequent(d_res,dict,n):
     else:
         del dict[k]
         return select_most_frequent(d_res,dict,n-1)
-    
+
 # Most frequents words
 freq_top=select_most_frequent({},freq,50)
 
@@ -70,4 +71,3 @@ i=0
 for k in freq.keys():
     dict_words[k]=i
     i+=1
-

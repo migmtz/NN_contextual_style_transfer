@@ -1,6 +1,10 @@
 import numpy as np
 import os
 
+# ---------------------------------------------------------------------------- #
+#                 Collecting relevant file names                               #
+# ---------------------------------------------------------------------------- #
+
 modern = []
 original = []
 
@@ -12,6 +16,10 @@ for x in os.listdir("../data"):
 
 original.sort()
 modern.sort()
+
+# ---------------------------------------------------------------------------- #
+#                 Scaning data files and storing data to csv                   #
+# ---------------------------------------------------------------------------- #
 
 i = 0
 data_m = np.loadtxt("../data/"+modern[0],dtype="str",delimiter="\n")
