@@ -1,8 +1,0 @@
-bin/
-include/
-lib/
-cache/
-*.pyc
-.Python
-.idea/
-share/
