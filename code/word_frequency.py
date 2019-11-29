@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 from os import listdir
+import pickle
 
 path="../data"
 
@@ -63,7 +64,7 @@ import matplotlib.pyplot as plt
 plt.hist(freq.values())
 
 # ---------------------------------------------------------------------------- #
-#                            Create word dictionnary                           #
+#                Create  and save word dictionnary                             #
 # ---------------------------------------------------------------------------- #
 
 dict_words={}
@@ -71,3 +72,6 @@ i=0
 for k in freq.keys():
     dict_words[k]=i
     i+=1
+
+with open('../data/dict_words.pkl', 'wb') as f:
+    pickle.dump(dict_words, f, pickle.HIGHEST_PROTOCOL)
