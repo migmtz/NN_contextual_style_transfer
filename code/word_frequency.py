@@ -2,7 +2,7 @@ import ipdb
 import os
 from os import listdir
 
-path="../data/shakespeare/enotes/merged"
+path="../data"
 
 # ---------------------------------------------------------------------------- #
 #                     Calculate the word frequency of plays                    #
@@ -17,28 +17,30 @@ def add_word(dict,word):
         dict[word]+=1
     return dict
 
-def freq_update(freq,file):
-    for line in file: 
-        for word in line.split():
-            word=word.upper()
-            if word[-1] in ["!","?",".",",",";",":"]:
-                freq=add_word(freq,word[:-1])
-                freq=add_word(freq,word[-1])
-            else:
-                freq=add_word(freq,word)
+def freq_update(freq,x):
+    for word in x.split():
+        word=word.upper()
+        if word[-1] in ["!","?",".",",",";",":"]:
+            freq=add_word(freq,word[:-1])
+            freq=add_word(freq,word[-1])
+        else:
+            freq=add_word(freq,word)
     return freq
 
 
-for f in listdir(path):
-    print(f)
-    with open(path+"/"+f, "r") as f:
-        freq=freq_update(freq,f)
-        f.close()
 
+data=pd.read_csv("../data/shakespeare.csv",sep="_")
+tab=np.array(data.iloc[:,1:3]).flatten()
+for x in tab:
+    freq=freq_update(freq,x)
+
+
+print(len(freq))
 
 # ---------------------------------------------------------------------------- #
 #                           Create basis for encoding                          #
 # ---------------------------------------------------------------------------- #
+
 
 def select_most_frequent(d_res,dict,n):
     vals=list(dict.values())
@@ -68,3 +70,4 @@ i=0
 for k in freq.keys():
     dict_words[k]=i
     i+=1
+
