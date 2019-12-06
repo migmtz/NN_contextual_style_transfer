@@ -4,8 +4,6 @@ import os
 from os import listdir
 import pickle
 
-path="../data"
-
 # ---------------------------------------------------------------------------- #
 #                     Calculate the word frequency of plays                    #
 # ---------------------------------------------------------------------------- #
@@ -57,7 +55,7 @@ def select_most_frequent(d_res,dict,n):
         return select_most_frequent(d_res,dict,n-1)
 
 # Most frequents words
-freq_top=select_most_frequent({},freq,50)
+# freq_top=select_most_frequent({},freq,50)
 
 import matplotlib.pyplot as plt
 
