@@ -31,7 +31,7 @@ def freq_update(freq,x):
 
 
 
-data=pd.read_csv("../data/shakespeare.csv",sep="_")
+data=pd.read_csv("./data/shakespeare.csv",sep="_")
 tab=np.array(data.iloc[:,1:3]).flatten()
 for x in tab:
     freq=freq_update(freq,x)
@@ -73,5 +73,5 @@ for k in freq.keys():
     dict_words[k]=i
     i+=1
 
-with open('../data/dict_words.pkl', 'wb') as f:
+with open('./data/dict_words.pkl', 'wb') as f:
     pickle.dump(dict_words, f, pickle.HIGHEST_PROTOCOL)
