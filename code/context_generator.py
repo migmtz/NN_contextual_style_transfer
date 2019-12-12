@@ -26,8 +26,6 @@ def yieldContext(data,index,style,contextMargin=2,wordCountLimit=50):
     str_context=" ".join(list_context)
     return sentence_truncature(str_context,wordCountLimit)
 
-# print(yieldContext(data,0,"original"))
-
 context={"index":[],"original":[],"modern":[],"play":[]}
 
 for i in range(len(data)):
