@@ -1,27 +1,47 @@
 # In this code you can find a general idea of the parameters, modules and networks as they are explained in the original paper.
 # They haven't been tested using the dataset we have to this day (9 December)
 
-## Parameters and Hyper parameters
 
-# Encoders and decoders
+# ---------------------------------------------------------------------------- #
+#                        Parameters and Hyper parameters                       #
+# ---------------------------------------------------------------------------- #
+
+# --------------------------- Encoders and decoders -------------------------- #
 
 nb_heads = 4
 d_feedforward = 1024
 
 batch_size = 64
 
-#optim ADAM
+# ---------------------------------------------------------------------------- #
+#                                   Optimizer                                  #
+# ---------------------------------------------------------------------------- #
+
+from torch.optim import Adam
 
 l_r = 5e-4
+optimizer=Adam(lr=l_r)
+
+# ---------------------------------------------------------------------------- #
+#                                 Loss function                                #
+# ---------------------------------------------------------------------------- #
+
+# Weights of loss function
+l1=1
+l2=1
+l3=1
+l4=1
 lambda_list = [l1,l2,l3,l4]
 
 # PENDING !!!
 
-d_embedding
+# d_embedding
 
-dict_size
+# dict_size
 
-## Layers
+# ---------------------------------------------------------------------------- #
+#                                    Layers                                    #
+# ---------------------------------------------------------------------------- #
 
 context_encoder = torch.nn.TransformerEncoderLayer(d_model = d_embedding, nhead = nb_heads, dim_feedforward = d_feedforward)
 
@@ -47,9 +67,14 @@ optim = torch.optim.Adam(params, lr = l_r)
 
 
 
+# ---------------------------------------------------------------------------- #
+#                                    Modules                                   #
+# ---------------------------------------------------------------------------- #
 
 
-## Style classifier
+
+
+# ----------------------------- Style classifier ----------------------------- #
 
 # The Style Classifier uses a classical CNN network, this is just the one used in TME of AMAL, not yet modified or revised
 # Feel free to modify / add your version
