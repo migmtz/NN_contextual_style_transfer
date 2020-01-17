@@ -27,6 +27,7 @@ optimizer=Adam(lr=l_r)
 # ---------------------------------------------------------------------------- #
 
 # Weights of loss function
+
 l1=1
 l2=1
 l3=1
@@ -38,6 +39,8 @@ lambda_list = [l1,l2,l3,l4]
 # d_embedding
 
 # dict_size
+embed_layer = torch.nn.Embedding(dict_size,d_embedding)
+
 
 # ---------------------------------------------------------------------------- #
 #                                    Layers                                    #
@@ -53,13 +56,14 @@ sentence_decoder = torch.nn.TransformerDecoderLayer(d_model = d_feedforward + 1,
 
 
 
+output_lin_context=10
+
 linear_context = torch.nn.Sequential(
-torch.nn.Linear(2*d_feed_forward,d_feedforward),
+torch.nn.Linear(2*d_feedforward,output_lin_context),
 torch.nn.ReLU()
 )
 
 
-embed_layer = torch.nn.Embedding(dict_size,d_embedding)
 
 # This is just to explicit that the optim is using Adam, the params are not to be kept like this
 params = list(context_encoder.parameters()) + list(sentence_encoder.parameters()) + list(sentence_decoder.parameters()) + list(linear_context.parameters())
