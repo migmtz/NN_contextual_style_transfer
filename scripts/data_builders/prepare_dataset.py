@@ -105,11 +105,11 @@ class Shakespeare(Dataset):
     @staticmethod
     def collate(batch):
 
-        x = torch.nn.utils.rnn.pad_sequence([item[0] for item in batch], batch_first=True)
-        y = torch.nn.utils.rnn.pad_sequence([item[1] for item in batch], batch_first=True)
+        x = torch.nn.utils.rnn.pad_sequence([item[0] for item in batch], batch_first=True,padding_value=-1)
+        y = torch.nn.utils.rnn.pad_sequence([item[1] for item in batch], batch_first=True,padding_value=-1)
 
-        ctx_x = torch.nn.utils.rnn.pad_sequence([item[2] for item in batch], batch_first=True)
-        ctx_y = torch.nn.utils.rnn.pad_sequence([item[3] for item in batch], batch_first=True)
+        ctx_x = torch.nn.utils.rnn.pad_sequence([item[2] for item in batch], batch_first=True,padding_value=-1)
+        ctx_y = torch.nn.utils.rnn.pad_sequence([item[3] for item in batch], batch_first=True,padding_value=-1)
 
         len_x = torch.cat([item[4] for item in batch])
         len_y = torch.cat([item[5] for item in batch])
