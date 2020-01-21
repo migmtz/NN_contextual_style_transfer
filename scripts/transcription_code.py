@@ -1,5 +1,13 @@
+import ipdb
+import pickle
+
 # In this code you can find a general idea of the parameters, modules and networks as they are explained in the original paper.
 # They haven't been tested using the dataset we have to this day (9 December)
+
+with open("/home/default/Bureau/AMAL/Projet/data/dict_words.pkl","rb") as f:
+    df=pickle.load(f)
+    dict_size=len(df)
+import ipdb; ipdb.set_trace()
 
 
 # ---------------------------------------------------------------------------- #
@@ -36,10 +44,18 @@ lambda_list = [l1,l2,l3,l4]
 
 # PENDING !!!
 
-# d_embedding
+# ---------------------------------------------------------------------------- #
+#                                   Embedding                                  #
+# ---------------------------------------------------------------------------- #
+# N.B: Embedding must be divisible by number of heads 
 
-# dict_size
+d_embedding=300
+# Paramètre à optimiser
+dict_size=19088
+
+
 embed_layer = torch.nn.Embedding(dict_size,d_embedding)
+
 
 
 # ---------------------------------------------------------------------------- #
@@ -57,6 +73,7 @@ sentence_decoder = torch.nn.TransformerDecoderLayer(d_model = d_feedforward + 1,
 
 
 output_lin_context=10
+# Paramètre à optimiser
 
 linear_context = torch.nn.Sequential(
 torch.nn.Linear(2*d_feedforward,output_lin_context),
@@ -100,3 +117,5 @@ class Model(torch.nn.Module):
         x = self.linear(x)
         x = self.sigmoid(x)
         return(x)
+
+
