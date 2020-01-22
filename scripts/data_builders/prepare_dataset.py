@@ -44,35 +44,55 @@ def select_most_frequent(d_res,dict,n):
 # ---------------------------------------------------------------------------- #
 
 def string2code(s,d):
-    return torch.LongTensor([d[w] for w in s])
+    """
+    - **Input**:
+        - string : a sentence
+        - dict : a tokenizer
+    - **Return** :
+        - a torch Longtensor (sentence tokenized)
+    """
+    return torch.LongTensor([d["<SOS>"]]+[d[w] for w in s]+[d["<EOS>"]])
 
 def code2string(t,d):
+    """
+    - **Input**:
+        - torch.Longtensor : a sentence tokenized
+        - dict : a tokenizer
+    - **Return** :
+        - a string sentence
+    """
     if type(t) != list:
         t = t.tolist()
+    t = t[1:t.index(min(t))-1]
+
     return ' '.join(d[i] for i in t)
 
-Batch = namedtuple("Batch", ["x", "y","ctx_x","ctx_y","len_x","len_y","len_ctx_x","len_ctx_y"])
+Batch = namedtuple("Batch", ["x", "y","ctx_x","ctx_y","len_x","len_y","len_ctx_x","len_ctx_y","label","label_ctx"])
 class Shakespeare(Dataset):
     """
     Tensors returned when loaded in the dataloader:
 
-    x_1 : modern english verse
-    x_2 : shakespearian verse
+    x_1 : input verse (modern / shakespearian)
+    x_2 : output verse (modern / shakespearian)
 
-    ctx_1 = context of the modern english verse
-    ctx_2 = context of the shakespearian verse
+    ctx_1 = context of the input verse
+    ctx_2 = context of the output verse
 
-    len_x : length of the modern english verse
-    len_y : length of the shakespearian verse
+    len_x : length of the input verse
+    len_y : length of the output verse
 
-    len_ctx_x : length of the modern english verse context
-    len_ctx_y : length of the shakespearian verse context
+    len_ctx_x : length of the input verse context
+    len_ctx_y : length of the output verse context
+
+    label : label of the input verse (0 : modern, 1 : shakespearian)
 
     """
 
-    def __init__(self, data,ctx,dict_words,device):
+    def __init__(self, data,ctx,dict_words,device,ratio=0.5,shuffle_ctx=False):
         i = 0
         self.device = device
+        self.ratio = ratio
+        self.shuffle_ctx = shuffle_ctx
 
         self.x = []
         self.y = []
@@ -97,10 +117,21 @@ class Shakespeare(Dataset):
         return len(self.x)
 
     def __getitem__(self, index: int):
-        return self.x[index], self.y[index],\
-        self.ctx_x[index],self.ctx_y[index],\
-        torch.LongTensor([self.x[index].shape[0]]).to(self.device),torch.LongTensor([self.y[index].shape[0]]).to(self.device),\
-        torch.LongTensor([self.ctx_x[index].shape[0]]).to(self.device),torch.LongTensor([self.ctx_y[index].shape[0]]).to(self.device)
+        index_ctx,label_ctx = (np.random.randint(0,len(self.x)),0) if (self.shuffle_ctx and np.random.rand()<0.5) else (index,1)
+
+
+        if np.random.rand()<self.ratio:
+            return self.x[index], self.y[index],\
+            self.ctx_x[index_ctx],self.ctx_y[index],\
+            torch.LongTensor([self.x[index].shape[0]]).to(self.device),torch.LongTensor([self.y[index].shape[0]]).to(self.device),\
+            torch.LongTensor([self.ctx_x[index_ctx].shape[0]]).to(self.device),torch.LongTensor([self.ctx_y[index].shape[0]]).to(self.device),\
+            torch.LongTensor([0]).to(self.device),torch.LongTensor([label_ctx]).to(self.device)
+        else:
+            return self.y[index], self.x[index],\
+            self.ctx_y[index_ctx],self.ctx_x[index],\
+            torch.LongTensor([self.y[index].shape[0]]).to(self.device),torch.LongTensor([self.x[index].shape[0]]).to(self.device),\
+            torch.LongTensor([self.ctx_y[index_ctx].shape[0]]).to(self.device),torch.LongTensor([self.ctx_x[index].shape[0]]).to(self.device),\
+            torch.LongTensor([1]).to(self.device),torch.LongTensor([label_ctx]).to(self.device)
 
     @staticmethod
     def collate(batch):
@@ -108,43 +139,47 @@ class Shakespeare(Dataset):
         x = torch.nn.utils.rnn.pad_sequence([item[0] for item in batch], batch_first=True,padding_value=-1)
         y = torch.nn.utils.rnn.pad_sequence([item[1] for item in batch], batch_first=True,padding_value=-1)
 
-        ctx_x = torch.nn.utils.rnn.pad_sequence([item[2] for item in batch], batch_first=True,padding_value=-1)
-        ctx_y = torch.nn.utils.rnn.pad_sequence([item[3] for item in batch], batch_first=True,padding_value=-1)
-
         len_x = torch.cat([item[4] for item in batch])
         len_y = torch.cat([item[5] for item in batch])
+
+        ctx_x = torch.nn.utils.rnn.pad_sequence([item[2] for item in batch], batch_first=True,padding_value=-1)
+        ctx_y = torch.nn.utils.rnn.pad_sequence([item[3] for item in batch], batch_first=True,padding_value=-1)
 
         len_ctx_x = torch.cat([item[6] for item in batch])
         len_ctx_y = torch.cat([item[7] for item in batch])
 
+        label = torch.cat([item[8] for item in batch])
+        label_ctx = torch.cat([item[9] for item in batch])
 
-        return Batch(x,y,ctx_x,ctx_y,len_x,len_y,len_ctx_x,len_ctx_y)
+        return Batch(x,y,ctx_x,ctx_y,len_x,len_y,len_ctx_x,len_ctx_y,label,label_ctx)
 
 # ---------------------------------------------------------------------------- #
 #                main function                                                 #
 # ---------------------------------------------------------------------------- #
 
-def prepare_dataset(device):
+def prepare_dataset(device,ratio=0.5,shuffle_ctx=False):
     """
-    Input:
-    a torch.device object
+    - **Input**:
+        - device : a torch.device object
+        - ratio : a float ratio between 0 and 1 that determines the average proportion of modern english verses in the data loader
+        - shuffle_ctx : if `True`, shuffle the contexts within a Batch so that half of the inputs has a wrong context. Useful to train the context recognizer model.
+    - **Return** :
+        - a torch Dataset | class : Shakespeare inherited from torch.utils.data.Dataset
+        - a python word dictionary (aka tokenizer) | class : dict
+    - **Tensors returned when loaded in the dataloader**:
+        - x_1 : input verse (modern / shakespearian)
+        - x_2 : output verse (modern / shakespearian)
 
-    Return :
-    - a torch Dataset | class : Shakespeare inherited from torch.utils.data.Dataset
-    - a python word dictionary (aka tokenizer) | class : dict
+        - ctx_1 = context of the input verse
+        - ctx_2 = context of the output verse
 
-    Tensors returned when loaded in the dataloader:
-    x_1 : modern english verse
-    x_2 : shakespearian verse
+        - len_x : length of the input verse
+        - len_y : length of the output verse
 
-    ctx_1 = context of the modern english verse
-    ctx_2 = context of the shakespearian verse
+        - len_ctx_x : length of the input verse context
+        - len_ctx_y : length of the output verse context
 
-    len_x : length of the modern english verse
-    len_y : length of the shakespearian verse
-
-    len_ctx_x : length of the modern english verse context
-    len_ctx_y : length of the shakespearian verse context
+        - label : label of the input verse (0 : modern, 1 : shakespearian)
     """
 
 
@@ -161,7 +196,9 @@ def prepare_dataset(device):
     #plt.hist(freq.values())
 
     #Create a word dictionnary
-    dict_words={k:i for i,k in enumerate(freq.keys())}
+    dict_words={k:i+2 for i,k in enumerate(freq.keys())}
+    dict_words["<SOS>"] = 0
+    dict_words["<EOS>"] = 1
 
     #preproessing data
     for sample,sample_ctx in zip(data,ctx):
@@ -171,5 +208,5 @@ def prepare_dataset(device):
             sample_ctx[1] = sample_ctx[1].replace(sign," "+sign+" ").upper()
             sample_ctx[2] = sample_ctx[2].replace(sign," "+sign+" ").upper()
 
-    train_data = Shakespeare(data,ctx,dict_words,device)
+    train_data = Shakespeare(data,ctx,dict_words,device,ratio,shuffle_ctx)
     return train_data,dict_words
