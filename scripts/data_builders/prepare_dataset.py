@@ -42,6 +42,23 @@ def select_most_frequent(d_res,dict,n):
 # ---------------------------------------------------------------------------- #
 #                     Create torch Dataset object to process data              #
 # ---------------------------------------------------------------------------- #
+def assemble(sentence,context):
+    """
+    - **Input**:
+        - torch.Longtensor: a sentence
+        - torch.Longtensor: the sentence context
+    - **Return**:
+        - torch.Longtensor: the sentence within its context
+    """
+    #Questions: 
+    # faut il concaténer tel quels? 
+    # les insérer dans le contexte (suggéré par l'article)?
+    #  Et en ce cas, faut il supprimer le padding sur la phrase (voir le supprimer altogether
+
+    #Calcul de l'index auquel insérer le deuxième élément
+    # index=(context in string2code("!?—")).nonzero()[1]
+    return torch.cat((sentence,context),dim=0)
+
 
 def string2code(s,d):
     """
