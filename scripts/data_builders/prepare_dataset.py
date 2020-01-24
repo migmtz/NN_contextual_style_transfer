@@ -50,8 +50,8 @@ def assemble(sentence,context):
     - **Return**:
         - torch.Longtensor: the sentence within its context
     """
-    #Questions: 
-    # faut il concaténer tel quels? 
+    #Questions:
+    # faut il concaténer tel quels?
     # les insérer dans le contexte (suggéré par l'article)?
     #  Et en ce cas, faut il supprimer le padding sur la phrase (voir le supprimer altogether
 
@@ -110,6 +110,7 @@ class Shakespeare(Dataset):
         self.device = device
         self.ratio = ratio
         self.shuffle_ctx = shuffle_ctx
+        self.padding_value = len(dict_words°+1
 
         self.x = []
         self.y = []
@@ -153,14 +154,14 @@ class Shakespeare(Dataset):
     @staticmethod
     def collate(batch):
 
-        x = torch.nn.utils.rnn.pad_sequence([item[0] for item in batch], batch_first=True,padding_value=-1)
-        y = torch.nn.utils.rnn.pad_sequence([item[1] for item in batch], batch_first=True,padding_value=-1)
+        x = torch.nn.utils.rnn.pad_sequence([item[0] for item in batch], batch_first=True,padding_value=self.padding_value)
+        y = torch.nn.utils.rnn.pad_sequence([item[1] for item in batch], batch_first=True,padding_value=self.padding_value)
 
         len_x = torch.cat([item[4] for item in batch])
         len_y = torch.cat([item[5] for item in batch])
 
-        ctx_x = torch.nn.utils.rnn.pad_sequence([item[2] for item in batch], batch_first=True,padding_value=-1)
-        ctx_y = torch.nn.utils.rnn.pad_sequence([item[3] for item in batch], batch_first=True,padding_value=-1)
+        ctx_x = torch.nn.utils.rnn.pad_sequence([item[2] for item in batch], batch_first=True,padding_value=self.padding_value)
+        ctx_y = torch.nn.utils.rnn.pad_sequence([item[3] for item in batch], batch_first=True,padding_value=self.padding_value)
 
         len_ctx_x = torch.cat([item[6] for item in batch])
         len_ctx_y = torch.cat([item[7] for item in batch])
