@@ -42,7 +42,7 @@ def select_most_frequent(d_res,dict,n):
 # ---------------------------------------------------------------------------- #
 #                     Create torch Dataset object to process data              #
 # ---------------------------------------------------------------------------- #
-def assemble(sentence,context):
+def assemble(sentence,context,function):
     """
     - **Input**:
         - torch.Longtensor: a sentence
@@ -56,8 +56,9 @@ def assemble(sentence,context):
     #  Et en ce cas, faut il supprimer le padding sur la phrase (voir le supprimer altogether
 
     #Calcul de l'index auquel insérer le deuxième élément
-    # index=(context in string2code("!?—")).nonzero()[1]
-    return torch.cat((sentence,context),dim=0)
+    # index=(context in string2code(".!?—")).nonzero()[1]
+
+    return torch.cat((function(sentence),context),dim=1)
 
 
 def string2code(s,d):
