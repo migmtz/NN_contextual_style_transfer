@@ -81,9 +81,13 @@ def code2string(t,d):
     """
     if type(t) != list:
         t = t.tolist()
-    t = t[1:t.index(min(t))-1]
+    t = t[1:t.index(max(t))-1]
 
     return ' '.join(d[i] for i in t)
+
+# ---------------------------------------------------------------------------- #
+#                1st dataset                                                   #
+# ---------------------------------------------------------------------------- #
 
 Batch = namedtuple("Batch", ["x", "y","ctx_x","ctx_y","len_x","len_y","len_ctx_x","len_ctx_y","label","label_ctx"])
 class Shakespeare(Dataset):
@@ -103,32 +107,32 @@ class Shakespeare(Dataset):
     len_ctx_y : length of the output verse context
 
     label : label of the input verse (0 : modern, 1 : shakespearian)
+    label_ctx : label of the context (0 : wrong, 1 : right)
 
     """
 
-    def __init__(self, data,ctx,dict_words,device,ratio=0.5,shuffle_ctx=False):
+    def __init__(self,data,dict_words,device,ratio=0.5,shuffle_ctx=False):
         i = 0
         self.device = device
         self.ratio = ratio
         self.shuffle_ctx = shuffle_ctx
-        self.padding_value = len(dict_words°+1
+        self.padding_value = len(dict_words)
 
         self.x = []
         self.y = []
-        self.ctx_x = []
-        self.ctx_y = []
+        self.play = []
+
         print("Loading ...")
-        for sample,sample_ctx in zip(data,ctx):
+        for sample in data:
             try:
                 eng = string2code(sample[1].split(),dict_words).to(self.device)
                 sha = string2code(sample[2].split(),dict_words).to(self.device)
-                ctx_sha = string2code(sample_ctx[2].split(),dict_words).to(self.device)
-                ctx_eng = string2code(sample_ctx[1].split(),dict_words).to(self.device)
                 self.x.append(eng)
                 self.y.append(sha)
-                self.ctx_x.append(ctx_eng)
-                self.ctx_y.append(ctx_sha)
+                self.play.append(sample[3].astype(float))
             except:
+                print(sample[1])
+                print(sample[2])
                 i+=1
         print("- Shakespeare dataset length : ",len(self.x))
         print("- Corrupted samples (ignored) : ",i)
@@ -136,25 +140,35 @@ class Shakespeare(Dataset):
         return len(self.x)
 
     def __getitem__(self, index: int):
+
         index_ctx,label_ctx = (np.random.randint(0,len(self.x)),0) if (self.shuffle_ctx and np.random.rand()<0.5) else (index,1)
+
+        if (index_ctx == 0) or (self.play[index_ctx-1] != self.play[index_ctx]) :
+            ctx_x = torch.cat([self.x[index][:-1],self.x[index_ctx + 1 ][1:-1],self.x[index_ctx + 2][1:]])
+            ctx_y = torch.cat([self.y[index][:-1],self.y[index_ctx + 1 ][1:-1],self.y[index_ctx + 2][1:]])
+        elif (index_ctx == len(self.x)-1) or (self.play[index_ctx+1] != self.play[index_ctx]) :
+            ctx_x = torch.cat([self.x[index_ctx - 2][:-1],self.x[index_ctx - 1][1:-1],self.x[index][1:]])
+            ctx_y = torch.cat([self.y[index_ctx - 2][:-1],self.y[index_ctx - 1][1:-1],self.y[index][1:]])
+        else:
+            ctx_x = torch.cat([self.x[index_ctx - 1][:-1],self.x[index][1:-1],self.x[index_ctx + 1][1:]])
+            ctx_y = torch.cat([self.y[index_ctx - 1][:-1],self.y[index][1:-1],self.y[index_ctx + 1][1:]])
 
 
         if np.random.rand()<self.ratio:
             return self.x[index], self.y[index],\
-            self.ctx_x[index_ctx],self.ctx_y[index],\
+            ctx_x,ctx_y,\
             torch.LongTensor([self.x[index].shape[0]]).to(self.device),torch.LongTensor([self.y[index].shape[0]]).to(self.device),\
-            torch.LongTensor([self.ctx_x[index_ctx].shape[0]]).to(self.device),torch.LongTensor([self.ctx_y[index].shape[0]]).to(self.device),\
+            torch.LongTensor([ctx_x.shape[0]]).to(self.device),torch.LongTensor([ctx_y.shape[0]]).to(self.device),\
             torch.LongTensor([0]).to(self.device),torch.LongTensor([label_ctx]).to(self.device)
         else:
             return self.y[index], self.x[index],\
-            self.ctx_y[index_ctx],self.ctx_x[index],\
+            ctx_y,ctx_x,\
             torch.LongTensor([self.y[index].shape[0]]).to(self.device),torch.LongTensor([self.x[index].shape[0]]).to(self.device),\
-            torch.LongTensor([self.ctx_y[index_ctx].shape[0]]).to(self.device),torch.LongTensor([self.ctx_x[index].shape[0]]).to(self.device),\
+            torch.LongTensor([ctx_y.shape[0]]).to(self.device),torch.LongTensor([ctx_x.shape[0]]).to(self.device),\
             torch.LongTensor([1]).to(self.device),torch.LongTensor([label_ctx]).to(self.device)
 
-    @staticmethod
-    def collate(batch):
-
+    #@staticmethod
+    def collate(self,batch):
         x = torch.nn.utils.rnn.pad_sequence([item[0] for item in batch], batch_first=True,padding_value=self.padding_value)
         y = torch.nn.utils.rnn.pad_sequence([item[1] for item in batch], batch_first=True,padding_value=self.padding_value)
 
@@ -171,10 +185,6 @@ class Shakespeare(Dataset):
         label_ctx = torch.cat([item[9] for item in batch])
 
         return Batch(x,y,ctx_x,ctx_y,len_x,len_y,len_ctx_x,len_ctx_y,label,label_ctx)
-
-# ---------------------------------------------------------------------------- #
-#                main function                                                 #
-# ---------------------------------------------------------------------------- #
 
 def prepare_dataset(device,ratio=0.5,shuffle_ctx=False):
     """
@@ -199,33 +209,33 @@ def prepare_dataset(device,ratio=0.5,shuffle_ctx=False):
         - len_ctx_y : length of the output verse context
 
         - label : label of the input verse (0 : modern, 1 : shakespearian)
+        - label_ctx : label of the context (0 : wrong, 1 : right)
     """
 
 
     #Load data
     data = np.loadtxt('data/shakespeare.csv',dtype="str",delimiter="_")
-    ctx = np.loadtxt('data/context.csv',dtype="str",delimiter="_")
-
-    #Plot word frequency
-    tab=data[:,1:3].flatten()
-    freq={}
-    for x in tab:
-        freq = freq_update(freq,x)
-    #freq_top=select_most_frequent({},freq,50)
-    #plt.hist(freq.values())
 
     #Create a word dictionnary
-    dict_words={k:i+2 for i,k in enumerate(freq.keys())}
+    dict_words={}
     dict_words["<SOS>"] = 0
     dict_words["<EOS>"] = 1
 
     #preproessing data
-    for sample,sample_ctx in zip(data,ctx):
-        for sign in ["!","?",".",",",";",":","—"]:
+    for sample in data:
+        for sign in ["!","?",".",",",";"]:
             sample[1] = sample[1].replace(sign," "+sign+" ").upper()
             sample[2] = sample[2].replace(sign," "+sign+" ").upper()
-            sample_ctx[1] = sample_ctx[1].replace(sign," "+sign+" ").upper()
-            sample_ctx[2] = sample_ctx[2].replace(sign," "+sign+" ").upper()
+        for sign in [":","—","“","”"]:
+            sample[1] = sample[1].replace(sign,"").upper()
+            sample[2] = sample[2].replace(sign,"").upper()
 
-    train_data = Shakespeare(data,ctx,dict_words,device,ratio,shuffle_ctx)
+        for word in sample[1].split():
+            if word not in dict_words:
+                dict_words[word] = len(dict_words)
+        for word in sample[2].split():
+            if word not in dict_words:
+                dict_words[word] = len(dict_words)
+
+    train_data = Shakespeare(data,dict_words,device,ratio,shuffle_ctx)
     return train_data,dict_words
