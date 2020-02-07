@@ -60,7 +60,7 @@ if __name__=="__main__":
     #Loading data
     data_path = "../data/shakespeare.csv"
     train_data, dict_words = prepare_dataset(data_path,device,ratio=0.5,shuffle_ctx=False) #check with shift+tab to look at the data structure
-    batch_size = 32
+    batch_size = 64
     dict_token = {b:a for a,b in dict_words.items()} #dict for code2string
     dict_size = len(dict_words)
     d_embedding = 768 #to plug in into BERT model
@@ -77,7 +77,7 @@ if __name__=="__main__":
         optimizer = optim.Adam(params=style_classifier.parameters(),lr=0.01)
         state = State(style_classifier,optimizer)
 
-    epochs = 100
+    epochs = 10
     loss_func=BCELoss()
     n = len(train_data.x) // batch_size
 
