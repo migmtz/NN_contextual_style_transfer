@@ -144,14 +144,14 @@ class Shakespeare(Dataset):
         index_ctx,label_ctx = (np.random.randint(0,len(self.x)),0) if (self.shuffle_ctx and np.random.rand()<0.5) else (index,1)
 
         if (index_ctx == 0) or (self.play[index_ctx-1] != self.play[index_ctx]) :
-            ctx_x = torch.cat([self.x[index][:-1],self.x[index_ctx + 1 ][1:-1],self.x[index_ctx + 2][1:]])
-            ctx_y = torch.cat([self.y[index][:-1],self.y[index_ctx + 1 ][1:-1],self.y[index_ctx + 2][1:]])
+            ctx_x = torch.cat([self.x[index_ctx + 1 ][1:-1],self.x[index_ctx + 2][1:]])
+            ctx_y = torch.cat([self.y[index_ctx + 1 ][1:-1],self.y[index_ctx + 2][1:]])
         elif (index_ctx == len(self.x)-1) or (self.play[index_ctx+1] != self.play[index_ctx]) :
-            ctx_x = torch.cat([self.x[index_ctx - 2][:-1],self.x[index_ctx - 1][1:-1],self.x[index][1:]])
-            ctx_y = torch.cat([self.y[index_ctx - 2][:-1],self.y[index_ctx - 1][1:-1],self.y[index][1:]])
+            ctx_x = torch.cat([self.x[index_ctx - 2][:-1],self.x[index_ctx - 1][1:-1]])
+            ctx_y = torch.cat([self.y[index_ctx - 2][:-1],self.y[index_ctx - 1][1:-1]])
         else:
-            ctx_x = torch.cat([self.x[index_ctx - 1][:-1],self.x[index][1:-1],self.x[index_ctx + 1][1:]])
-            ctx_y = torch.cat([self.y[index_ctx - 1][:-1],self.y[index][1:-1],self.y[index_ctx + 1][1:]])
+            ctx_x = torch.cat([self.x[index_ctx - 1][:-1],self.x[index_ctx + 1][1:]])
+            ctx_y = torch.cat([self.y[index_ctx - 1][:-1],self.y[index_ctx + 1][1:]])
 
 
         if np.random.rand()<self.ratio:
@@ -186,9 +186,10 @@ class Shakespeare(Dataset):
 
         return Batch(x,y,ctx_x,ctx_y,len_x,len_y,len_ctx_x,len_ctx_y,label,label_ctx)
 
-def prepare_dataset(device,ratio=0.5,shuffle_ctx=False):
+def prepare_dataset(path,device,ratio=0.5,shuffle_ctx=False):
     """
     - **Input**:
+        - path : relative path of the shakespeare.csv file
         - device : a torch.device object
         - ratio : a float ratio between 0 and 1 that determines the average proportion of modern english verses in the data loader
         - shuffle_ctx : if `True`, shuffle the contexts within a Batch so that half of the inputs has a wrong context. Useful to train the context recognizer model.
@@ -214,7 +215,7 @@ def prepare_dataset(device,ratio=0.5,shuffle_ctx=False):
 
 
     #Load data
-    data = np.loadtxt('data/shakespeare.csv',dtype="str",delimiter="_")
+    data = np.loadtxt(path,dtype="str",delimiter="_")
 
     #Create a word dictionnary
     dict_words={}

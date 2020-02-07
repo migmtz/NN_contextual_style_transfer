@@ -1,6 +1,5 @@
 from data_builders.prepare_dataset import prepare_dataset,string2code,code2string,assemble
 
-
 import torch
 import torchvision.datasets as datasets
 import torch.nn.functional as F
@@ -11,13 +10,12 @@ import math
 from torch.nn import BCELoss,CrossEntropyLoss
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
-import pickle
-import os
+
+from pathlib import Path
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print("device = ",device)
 
 class Transpose(torch.nn.Module):
-
     def __init__(self,dim0,dim1):
         super().__init__()
         self.dim0=dim0
@@ -46,49 +44,66 @@ class StyleClassifier(torch.nn.Module):
         self.linear=nn.Linear(d_hidden,1)
         self.sigmoid=nn.Sigmoid()
         self.model=nn.Sequential(self.embedding,self.transpose,self.conv1d,self.pool,self.reduce,self.linear,self.sigmoid)
-        
-    def forward(self,x1,x2):
-        return torch.cat((self.model(x1),self.model(x2)),dim=1)
-        
+
+    def forward(self,x):
+        return self.model(x)
+
+class State:
+    def __init__(self,model,optim):
+        self.model = model
+        self.optim = optim
+        self.epoch = 0
+
+
 if __name__=="__main__":
-    PATH=os.getcwd()
-    PATH="./embedding_params.pickle"
-    train_data, dict_words = prepare_dataset(device,ratio=0.5,shuffle_ctx=True) #check with shift+tab to look at the data structure
+
+    #Loading data
+    data_path = "../data/shakespeare.csv"
+    train_data, dict_words = prepare_dataset(data_path,device,ratio=0.5,shuffle_ctx=False) #check with shift+tab to look at the data structure
     batch_size = 32
     dict_token = {b:a for a,b in dict_words.items()} #dict for code2string
+    dict_size = len(dict_words)
+    d_embedding = 768 #to plug in into BERT model
 
     train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size,
                                             shuffle=True,collate_fn=train_data.collate)
-    dict_size = len(dict_words)
-    d_embedding = 300 #cf. paper Y.Kim 2014 Convolutional Neural Networks for Sentence Classification
 
-    print("- dict size : ",dict_size)
+    #Initializing model and optimizer
+    savepath = Path("../data/models/style_classifier/v0")
+    if savepath.is_file():
+        state = torch.load(savepath)
+    else:
+        style_classifier = StyleClassifier(dict_size=dict_size,d_embedding=d_embedding,d_hidden=10).to(device)
+        optimizer = optim.Adam(params=style_classifier.parameters(),lr=0.01)
+        state = State(style_classifier,optimizer)
 
     epochs = 100
-    style_classifier = StyleClassifier(dict_size=dict_size,d_embedding=300,d_hidden=10).to(device)
-    optimizer = optim.Adam(params=style_classifier.parameters(),lr=0.01)
     loss_func=BCELoss()
-
     n = len(train_data.x) // batch_size
 
-    for epoch in range(epochs):
-        total_loss = 0
-        i = 0
-        for x,y,_,_ , _,_ ,_,_, label,_ in train_loader:
-            i+=1
-            optimizer.zero_grad()
-            z=style_classifier.forward(x,y)
-            label=label.reshape(-1,1)
-            z_label=torch.cat((label,1-label),dim=1).float()
-            loss=loss_func(z,z_label.float())
+    #Training models
+    writer = SummaryWriter("../data/runs/style_classifier_01")
+    for epoch in range(state.epoch,epochs):
+        total_loss,total_accuracy  = 0,0
+        for x,_,_,_ , _,_ ,_,_, label,_ in train_loader:
+
+            state.optim.zero_grad()
+            x = state.model.forward(x)
+            y = label.reshape(-1,1).float()
+            loss = loss_func(x,y)
             loss.backward()
-            optimizer.step()
+            state.optim.step()
+
             total_loss += loss.item()
-        print('-' * 35)
-        print('| epoch {:3d} | '
-              'lr {:02.2f} | '
-              'loss {:5.2f}'.format(
-                epoch+1, optimizer.state_dict()["param_groups"][0]["lr"],
-                round(total_loss,2)))
-    with open("style_classifier_params.pickle","wb") as f:
-        pickle.dump(style_classifier.state_dict(),f)
+            total_accuracy += 1 - ( (x>0.5).int() - y ).abs().sum().item() / batch_size
+
+        #Vizualization
+        print("Epoch \t",epoch+1," | Loss \t ",round(total_loss/n,2))
+        writer.add_scalar('train_loss',total_loss/n,epoch+1)
+        writer.add_scalar('train_accuracy',total_accuracy/n,epoch+1)
+
+        #Saving model
+        state.epoch += 1
+        with savepath.open ( "wb" ) as fp:
+            state.epoch = epoch + 1
+            torch.save( state, fp )
