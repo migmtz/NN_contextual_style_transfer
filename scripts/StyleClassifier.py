@@ -70,6 +70,7 @@ if __name__=="__main__":
 
     #Initializing model and optimizer
     savepath = Path("../data/models/style_classifier/v0")
+    embeddingpath = Path("../data/models/embeddings/v0")
     if savepath.is_file():
         state = torch.load(savepath)
     else:
@@ -104,6 +105,8 @@ if __name__=="__main__":
 
         #Saving model
         state.epoch += 1
-        with savepath.open ( "wb" ) as fp:
+        with savepath.open( "wb" ) as fp:
             state.epoch = epoch + 1
             torch.save( state, fp )
+        with embeddingpath.open( "wb" ) as fp:
+            torch.save(state.model.embedding, fp)
