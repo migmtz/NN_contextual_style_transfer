@@ -57,11 +57,10 @@ if __name__=="__main__":
     batch_size = 32
     dict_token = {b:a for a,b in dict_words.items()} #dict for code2string
 
-    train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size,
-                                            shuffle=True,collate_fn=train_data.collate)
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size,shuffle=True,collate_fn=train_data.collate)
     dict_size = len(dict_words)
     d_embedding = 300 #cf. paper Y.Kim 2014 Convolutional Neural Networks for Sentence Classification
-
+    import ipdb; ipdb.set_trace()
     print("- dict size : ",dict_size)
 
     epochs = 100

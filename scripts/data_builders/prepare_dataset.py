@@ -214,7 +214,7 @@ def prepare_dataset(device,ratio=0.5,shuffle_ctx=False):
 
 
     #Load data
-    data = np.loadtxt('data/shakespeare.csv',dtype="str",delimiter="_")
+    data = np.loadtxt('../data/shakespeare.csv',dtype="str",delimiter="_")
 
     #Create a word dictionnary
     dict_words={}
