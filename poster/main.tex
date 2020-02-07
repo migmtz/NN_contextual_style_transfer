@@ -13,10 +13,9 @@
 \usepackage{emory-theme}
 
 \usepackage{mwe} % for placeholder images
-\usepackage{biblatex}
-\addbibresource{bibliography.bib}
 
-% set theme parameters
+\addbibresource{refs.bib}
+
 \tikzposterlatexaffectionproofoff
 \usetheme{EmoryTheme}
 \usecolorstyle{EmoryStyle}
@@ -24,29 +23,59 @@
 \title{Contextual Text Style Transfer}
 \author{P. Champion, J.-B. Gaya and M. Herrera-Martinez}
 \institute{Sorbonne Université}
-%\titlegraphic{\includegraphics[width=0.07\textwidth]{Emory_vt_280.png}}
-
 % begin document
 \begin{document}
 \maketitle
 \centering
+
 \begin{columns}
     \column{0.32}
     \block{Motivation \& Background }{
     Text style transfer consists in the translation of a sentence into a desired style. It encompasses various applications, e.g. sentiment manipulation and formalized writing. 
     
-    Previous work relied mostly on parallel corpora with a sentence-to-sentence  learning framework \cite{bahdanau2014neural}.
-    In the studied paper, an approach to perform this task while maintaining the sentence coherent with its surrounding context is discussed; hence the name contextual text style transfer. 
+    Previous work relied mostly on parallel corpora with a sentence-to-sentence learning framework \cite{bahdanau2014neural},\cite{jhamtani2017shakespearizing}. This approach requires however a parallel corpus of sentences in both styles, compared on a one-to-one basis. In practice however, such an information may not be available, because sentences are embedded within a paragraph -the dataset is then referred to as non-parallel.
     
-    This poster summarizes the work conducted based on this paper. The section \ref{ModelSection} introduces the key concepts and modules used to build the model, and the section \ref{ResultsSection}
+    In the studied paper, an approach to perform the style transfer task while maintaining the sentence coherent with its surrounding context is discussed. This approach is mostly targeted at non-parallel data but may be extended to parallel data.
     
-    
+    This poster summarizes the work conducted based on this paper. The section \ref{ModelSection} introduces the key concepts and modules used to build the model: in this section we notably elaborate on previous work and underline our contributions. The section \ref{ResultsSection} summarizes the results of our approach.
     
     }
+    %\vspace{10pt}
     \block{Model}{
-    \label{ModelSection}
-    %\section{Key Concepts}
-    \section{Dataset}
+    %\label{ModelSection}
+ 
+    
+    \section*{Dataset}
+    
+    The considered dataset consist in the concatenated corpus of the Shakespeare's plays, in its original version and in modern English. Plays are written in verses, as well translations, enabling a parallel dataset. 21079 verses were considered overall. 
+    
+    For each verse $x$, the associated context $ctx_x$ is defined as the verse immediately before and after the considered verse - except when the previous or the next verse belongs to an other play or does not exist: in that case, it is ignored.
+    
+   
+    \section*{Architecture}
+    
+    \subsection*{Embedding}
+    
+    An uppercase method was applied to the whole dataset and after some further post-processing\cite{lequel}. With this processing, the dictionnary size equal to 17513.
+    An embedding dimension of 768 was considered, for the embedding to be compatible with the BERT model used in the coherence classifer \cite{ref}. 
+    
+    The embedding was trained jointly with the Style Classifer (see subsection on the Style Classfier)    
+    
+    \subsection*{Encoder}
+	
+	
+
+    \subsection*{Decoder}
+    \subsection*{Coherence Classifer}
+    
+	    
+    
+    \subsection*{Style Classifer \label{subsectionStyleClassifier}}
+   	
+    The Style classifier takes as inputs two sentences $x_1,x_2$ and predicts their respectives styles $(\hat{l_1},\hat{l_2})$. It is evaluated with a binary cross entropy loss against their actual style $(l_1,l_2)$. 
+    
+     
+    For simplification purposes, the embedding layer was prepended to the style classifier and both modules were trained together. The training took place over the whole dataset and plateau with an accuracy of xx \% (vs. 86.78 \% in the reference paper).
     
     
     
@@ -62,16 +91,13 @@
     \block{Remarks}{
 
     }
-    
 
+    
     \block{References}{
         \vspace{-1em}
         \begin{footnotesize}
         \printbibliography[heading=none]
         \end{footnotesize}
     }
-
 \end{columns}
-%\bibliographystyle{plain}
-%\bibliography{refs}
 \end{document}
