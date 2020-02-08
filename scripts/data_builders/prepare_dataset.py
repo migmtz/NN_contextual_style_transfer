@@ -316,35 +316,24 @@ class Shakespeare_ctx(Dataset):
 
         return Batch_ctx(ctx,pos_token,pos_ctx,label)
 
-def prepare_dataset_ctx(device,ratio=0.5,shuffle_ctx=False):
+def prepare_dataset_ctx(path,device,ratio=0.5,shuffle_ctx=False):
     """
     - **Input**:
         - device : a torch.device object
         - ratio : a float ratio between 0 and 1 that determines the average proportion of modern english verses in the data loader
         - shuffle_ctx : if `True`, shuffle the contexts within a Batch so that half of the inputs has a wrong context. Useful to train the context recognizer model.
     - **Return** :
-        - a torch Dataset | class : Shakespeare inherited from torch.utils.data.Dataset
+        - a torch Dataset | class : Shakespeare_ctx inherited from torch.utils.data.Dataset
         - a python word dictionary (aka tokenizer) | class : dict
-    - **Tensors returned when loaded in the dataloader**:
-        - x_1 : input verse (modern / shakespearian)
-        - x_2 : output verse (modern / shakespearian)
-
-        - ctx_1 = context of the input verse
-        - ctx_2 = context of the output verse
-
-        - len_x : length of the input verse
-        - len_y : length of the output verse
-
-        - len_ctx_x : length of the input verse context
-        - len_ctx_y : length of the output verse context
-
-        - label : label of the input verse (0 : modern, 1 : shakespearian)
+        Tensors returned when loaded in the dataloader:
+        - ctx = context with input sentence concatenated inside
+        - pos_token : position of each word in ctx
+        - pos_ctx : whether if a word belongs to the context or the input sentence
         - label_ctx : label of the context (0 : wrong, 1 : right)
     """
 
-
     #Load data
-    data = np.loadtxt('data/shakespeare.csv',dtype="str",delimiter="_")
+    data = np.loadtxt(path,dtype="str",delimiter="_")
 
     #Create a word dictionnary
     dict_words={}
