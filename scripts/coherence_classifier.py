@@ -1,23 +1,23 @@
-
-
+from data_builders.prepare_dataset import prepare_dataset,prepare_dataset_ctx,string2code,code2string,assemble
 import torch
+import torchvision.datasets as datasets
+import torch.nn.functional as F
+from torch import nn
+from torch import optim
+from torch.utils.tensorboard import SummaryWriter
+import math
+from torch.nn import BCELoss,CrossEntropyLoss
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+from torch.nn import TransformerEncoder, TransformerEncoderLayer
+import pickle
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print("device = ",device)
 
-# dataset
-
-class CNN_classifier(torch.nn.Module):
-    def __init__(self,d_embedding):
-        super().__init__()
-        self.conv_1 = torch.nn.Conv1d(d_embedding,3,kernel_size = 3, stride = 1)
-        self.max_pool = torch.nn.MaxPool1d(3,2)
-        self.relu = torch.nn.ReLU()
-        self.linear = torch.nn.Linear(3,1)
-        self.sigmoid = torch.nn.Sigmoid()
-
-    def forward(self,x):
-        x = self.conv_1(x.transpose(1,2))
-        x = self.max_pool(x)
-        x = self.relu(x)
-        x = torch.max(x,2)[0]
-        x = self.linear(x)
-        x = self.sigmoid(x)
-        return(x)
+#Preprocessing data
+train_data, dict_words = prepare_dataset_ctx("data/shakespeare.csv",device,ratio=0.5,shuffle_ctx=True) #check with shift+tab to look at the data structure
+batch_size = 64
+dict_token = {b:a for a,b in dict_words.items()} #dict for code2string
+dict_size = len(dict_words)
+print("- dict size : ",dict_size)
+train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size,
+                                           shuffle=True,collate_fn=train_data.collate)

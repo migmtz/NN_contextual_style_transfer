@@ -42,25 +42,6 @@ def select_most_frequent(d_res,dict,n):
 # ---------------------------------------------------------------------------- #
 #                     Create torch Dataset object to process data              #
 # ---------------------------------------------------------------------------- #
-def assemble(sentence,context,function):
-    """
-    - **Input**:
-        - torch.Longtensor: a sentence
-        - torch.Longtensor: the sentence context
-    - **Return**:
-        - torch.Longtensor: the sentence within its context
-    """
-    #Questions:
-    # faut il concaténer tel quels?
-    # les insérer dans le contexte (suggéré par l'article)?
-    #  Et en ce cas, faut il supprimer le padding sur la phrase (voir le supprimer altogether
-
-    #Calcul de l'index auquel insérer le deuxième élément
-    # index=(context in string2code(".!?—")).nonzero()[1]
-
-    return torch.cat((function(sentence),context),dim=1)
-
-
 def string2code(s,d):
     """
     - **Input**:
@@ -88,7 +69,6 @@ def code2string(t,d):
 # ---------------------------------------------------------------------------- #
 #                1st dataset                                                   #
 # ---------------------------------------------------------------------------- #
-
 Batch = namedtuple("Batch", ["x", "y","ctx_x","ctx_y","len_x","len_y","len_ctx_x","len_ctx_y","label","label_ctx"])
 class Shakespeare(Dataset):
     """
@@ -241,6 +221,10 @@ def prepare_dataset(path,device,ratio=0.5,shuffle_ctx=False):
     train_data = Shakespeare(data,dict_words,device,ratio,shuffle_ctx)
     return train_data,dict_words
 
+# ---------------------------------------------------------------------------- #
+#                2nd dataset (for coherence)                                   #
+# ---------------------------------------------------------------------------- #
+
 Batch_ctx = namedtuple("Batch_ctx", ["ctx","pos_token","pos_ctx","label_ctx"])
 class Shakespeare_ctx(Dataset):
     """
@@ -325,7 +309,7 @@ def prepare_dataset_ctx(path,device,ratio=0.5,shuffle_ctx=False):
     - **Return** :
         - a torch Dataset | class : Shakespeare_ctx inherited from torch.utils.data.Dataset
         - a python word dictionary (aka tokenizer) | class : dict
-        Tensors returned when loaded in the dataloader:
+    - Tensors returned when loaded in the dataloader:
         - ctx = context with input sentence concatenated inside
         - pos_token : position of each word in ctx
         - pos_ctx : whether if a word belongs to the context or the input sentence
