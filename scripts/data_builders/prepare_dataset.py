@@ -62,7 +62,8 @@ def code2string(t,d):
     """
     if type(t) != list:
         t = t.tolist()
-    t = t[1:t.index(max(t))-1]
+    if len(d) in t:
+        t = t[:t.index(max(t))]
 
     return ' '.join(d[i] for i in t)
 
