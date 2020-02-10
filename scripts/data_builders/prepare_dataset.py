@@ -52,7 +52,7 @@ def string2code(s,d):
     """
     return torch.LongTensor([d["<SOS>"]]+[d[w] for w in s]+[d["<EOS>"]])
 
-def code2string(t,d):
+def code2string(t,d,no_pad=False):
     """
     - **Input**:
         - torch.Longtensor : a sentence tokenized
@@ -62,8 +62,11 @@ def code2string(t,d):
     """
     if type(t) != list:
         t = t.tolist()
+    if no_pad:
+        return ' '.join(d[i] for i in t)
     if len(d) in t:
         t = t[:t.index(max(t))]
+
 
     return ' '.join(d[i] for i in t)
 
