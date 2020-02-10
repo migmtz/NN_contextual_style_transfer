@@ -299,6 +299,7 @@ class Shakespeare_ctx(Dataset):
         label = torch.cat([item[3] for item in batch])
 
 
+
         return Batch_ctx(ctx,pos_token,pos_ctx,label)
 
 def prepare_dataset_ctx(path,device,ratio=0.5,shuffle_ctx=False):
@@ -348,7 +349,7 @@ def prepare_dataset_ctx(path,device,ratio=0.5,shuffle_ctx=False):
 # ---------------------------------------------------------------------------- #
 #                3rd dataset (for parallel model)                              #
 # ---------------------------------------------------------------------------- #
-Batch = namedtuple("Batch_parallel", ["x", "y","ctx_x","ctx_y_1","ctx_y_2","label_x"])
+Batch = namedtuple("Batch_parallel", ["x", "y","ctx_x","ctx_y_1","ctx_y_2","label_x","len_y"])
 class Shakespeare_parallel(Dataset):
     """
     Tensors returned when loaded in the dataloader:
@@ -362,6 +363,8 @@ class Shakespeare_parallel(Dataset):
     ctx_y_2 = next context of the output verse
 
     label_x : label of the input verse (0 : modern, 1 : shakespearian)
+
+    len_y : length of the output verse (not a tensor but a list, used for scoring)
 
     """
 
@@ -403,7 +406,8 @@ class Shakespeare_parallel(Dataset):
         ctx_y_1 = y[idx - 1][:-1]
         ctx_y_2 = y[idx + 1][1:]
 
-        return x[idx],y[idx] , ctx_x , ctx_y_1,ctx_y_2 , label_x
+
+        return x[idx],y[idx] , ctx_x , ctx_y_1,ctx_y_2 , label_x, y[idx].shape[0]
 
     def collate(self,batch):
         x = torch.nn.utils.rnn.pad_sequence([item[0] for item in batch], batch_first=True,padding_value=self.padding_value)
@@ -416,7 +420,9 @@ class Shakespeare_parallel(Dataset):
 
         label_x = torch.cat([item[5] for item in batch])
 
-        return Batch(x,y,ctx_x,ctx_y_1,ctx_y_2,label_x)
+        len_y = [item[4] for item in batch]
+
+        return Batch(x,y,ctx_x,ctx_y_1,ctx_y_2,label_x,len_y)
 
 def prepare_dataset_parallel(path,device,ratio=0.5,shuffle_ctx=False):
     """
