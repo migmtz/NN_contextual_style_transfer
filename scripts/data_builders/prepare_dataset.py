@@ -419,7 +419,7 @@ class Shakespeare_parallel(Dataset):
 
         label_x = torch.LongTensor([item[5] for item in batch])
 
-        len_y = [item[4] for item in batch]
+        len_y = [item[6] for item in batch]
 
         return Batch(x,y,ctx_x,ctx_y_1,ctx_y_2,label_x,len_y)
 
