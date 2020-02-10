@@ -372,7 +372,6 @@ class Shakespeare_parallel(Dataset):
         i = 0
         self.device = device
         self.ratio = ratio
-        self.shuffle_ctx = shuffle_ctx
         self.padding_value = len(dict_words)
 
         self.x = []
@@ -400,7 +399,7 @@ class Shakespeare_parallel(Dataset):
         idx = index
         while (idx == 0) or (self.play[idx-1] != self.play[idx]) or (idx == len(self.x)-1) or (self.play[idx+1] != self.play[idx]):
             idx = np.random.randint(1,len(self.x)-1)
-        x,y,label_x = self.x,self.y,0 if np.random.rand()<self.ratio else self.y,self.x,1
+        x,y,label_x = (self.x,self.y,0) if np.random.rand()<self.ratio else (self.y,self.x,1)
 
         ctx_x = torch.cat([x[idx - 1 ][:-1],x[idx + 1][1:]])
         ctx_y_1 = y[idx - 1][:-1]
@@ -418,7 +417,7 @@ class Shakespeare_parallel(Dataset):
         ctx_y_1 = torch.nn.utils.rnn.pad_sequence([item[3] for item in batch], batch_first=True,padding_value=self.padding_value)
         ctx_y_2 = torch.nn.utils.rnn.pad_sequence([item[4] for item in batch], batch_first=True,padding_value=self.padding_value)
 
-        label_x = torch.cat([item[5] for item in batch])
+        label_x = torch.LongTensor([item[5] for item in batch])
 
         len_y = [item[4] for item in batch]
 
