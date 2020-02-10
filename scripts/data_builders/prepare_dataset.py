@@ -18,7 +18,7 @@ def add_word(dict,word):
 
 def freq_update(freq,x):
     for word in x.split():
-        word=word.upper()
+        word=word.lower()
         if word[-1] in ["!","?",".",",",";",":"]:
             freq=add_word(freq,word[:-1])
             freq=add_word(freq,word[-1])
@@ -206,11 +206,11 @@ def prepare_dataset(path,device,ratio=0.5,shuffle_ctx=False):
     #preproessing data
     for sample in data:
         for sign in ["!","?",".",",",";"]:
-            sample[1] = sample[1].replace(sign," "+sign+" ").upper()
-            sample[2] = sample[2].replace(sign," "+sign+" ").upper()
+            sample[1] = sample[1].replace(sign," "+sign+" ").lower()
+            sample[2] = sample[2].replace(sign," "+sign+" ").lower()
         for sign in [":","—","“","”"]:
-            sample[1] = sample[1].replace(sign,"").upper()
-            sample[2] = sample[2].replace(sign,"").upper()
+            sample[1] = sample[1].replace(sign,"").lower()
+            sample[2] = sample[2].replace(sign,"").lower()
 
         for word in sample[1].split():
             if word not in dict_words:
@@ -342,4 +342,128 @@ def prepare_dataset_ctx(path,device,ratio=0.5,shuffle_ctx=False):
                 dict_words[word] = len(dict_words)
 
     train_data = Shakespeare_ctx(data,dict_words,device,ratio,shuffle_ctx)
+    return train_data,dict_words
+
+
+# ---------------------------------------------------------------------------- #
+#                3rd dataset (for parallel model)                              #
+# ---------------------------------------------------------------------------- #
+Batch = namedtuple("Batch_parallel", ["x", "y","ctx_x","ctx_y_1","ctx_y_2","label_x"])
+class Shakespeare_parallel(Dataset):
+    """
+    Tensors returned when loaded in the dataloader:
+
+    x : input verse (modern / shakespearian)
+    y : output verse (modern / shakespearian)
+
+    ctx_x = context of the input verse
+
+    ctx_y_1 = previous context of the output verse
+    ctx_y_2 = next context of the output verse
+
+    label_x : label of the input verse (0 : modern, 1 : shakespearian)
+
+    """
+
+    def __init__(self,data,dict_words,device,ratio=0.5):
+        i = 0
+        self.device = device
+        self.ratio = ratio
+        self.shuffle_ctx = shuffle_ctx
+        self.padding_value = len(dict_words)
+
+        self.x = []
+        self.y = []
+        self.play = []
+
+        print("Loading ...")
+        for sample in data:
+            try:
+                eng = string2code(sample[1].split(),dict_words).to(self.device)
+                sha = string2code(sample[2].split(),dict_words).to(self.device)
+                self.x.append(eng)
+                self.y.append(sha)
+                self.play.append(sample[3].astype(float))
+            except:
+                print(sample[1])
+                print(sample[2])
+                i+=1
+        print("- Shakespeare dataset length : ",len(self.x))
+        print("- Corrupted samples (ignored) : ",i)
+    def __len__(self):
+        return len(self.x)
+
+    def __getitem__(self, index: int):
+        idx = index
+        while (idx == 0) or (self.play[idx-1] != self.play[idx]) or (idx == len(self.x)-1) or (self.play[idx+1] != self.play[idx]):
+            idx = np.random.randint(1,len(self.x)-1)
+        x,y,label_x = self.x,self.y,0 if np.random.rand()<self.ratio else self.y,self.x,1
+
+        ctx_x = torch.cat([x[idx - 1 ][:-1],x[idx + 1][1:]])
+        ctx_y_1 = y[idx - 1][:-1]
+        ctx_y_2 = y[idx + 1][1:]
+
+        return x[idx],y[idx] , ctx_x , ctx_y_1,ctx_y_2 , label_x
+
+    def collate(self,batch):
+        x = torch.nn.utils.rnn.pad_sequence([item[0] for item in batch], batch_first=True,padding_value=self.padding_value)
+        y = torch.nn.utils.rnn.pad_sequence([item[1] for item in batch], batch_first=True,padding_value=self.padding_value)
+
+        ctx_x = torch.nn.utils.rnn.pad_sequence([item[2] for item in batch], batch_first=True,padding_value=self.padding_value)
+
+        ctx_y_1 = torch.nn.utils.rnn.pad_sequence([item[3] for item in batch], batch_first=True,padding_value=self.padding_value)
+        ctx_y_2 = torch.nn.utils.rnn.pad_sequence([item[4] for item in batch], batch_first=True,padding_value=self.padding_value)
+
+        label_x = torch.cat([item[5] for item in batch])
+
+        return Batch(x,y,ctx_x,ctx_y_1,ctx_y_2,label_x)
+
+def prepare_dataset_parallel(path,device,ratio=0.5,shuffle_ctx=False):
+    """
+    - **Input**:
+        - path : relative path of the shakespeare.csv file
+        - device : a torch.device object
+        - ratio : a float ratio between 0 and 1 that determines the average proportion of modern english verses in the data loader
+        - shuffle_ctx : if `True`, shuffle the contexts within a Batch so that half of the inputs has a wrong context. Useful to train the context recognizer model.
+    - **Return** :
+        - a torch Dataset | class : Shakespeare inherited from torch.utils.data.Dataset
+        - a python word dictionary (aka tokenizer) | class : dict
+    - Tensors returned when loaded in the dataloader:
+        - x : input verse (modern / shakespearian)
+        - y : output verse (modern / shakespearian)
+
+        - ctx_x = context of the input verse
+
+        - ctx_y_1 = previous context of the output verse
+        - ctx_y_2 = next context of the output verse
+
+        - label_x : label of the input verse (0 : modern, 1 : shakespearian)
+    """
+
+
+    #Load data
+    data = np.loadtxt(path,dtype="str",delimiter="_")
+
+    #Create a word dictionnary
+    dict_words={}
+    dict_words["<SOS>"] = 0
+    dict_words["<EOS>"] = 1
+
+    #preproessing data
+    for sample in data:
+        for sign in ["!","?",".",",",";"]:
+            sample[1] = sample[1].replace(sign," "+sign+" ").lower()
+            sample[2] = sample[2].replace(sign," "+sign+" ").lower()
+        for sign in [":","—","“","”"]:
+            sample[1] = sample[1].replace(sign,"").lower()
+            sample[2] = sample[2].replace(sign,"").lower()
+
+        for word in sample[1].split():
+            if word not in dict_words:
+                dict_words[word] = len(dict_words)
+        for word in sample[2].split():
+            if word not in dict_words:
+                dict_words[word] = len(dict_words)
+
+    train_data = Shakespeare_parallel(data,dict_words,device,ratio)
     return train_data,dict_words
